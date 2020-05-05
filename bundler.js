@@ -2,14 +2,14 @@
 // node bundler.js 用node运行打包工具
 const fs = require('fs');
 const path = require('path');
-// 语法解析
+// 语法解析工具
 const parser = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 const babel = require('@babel/core');
 
 const moduleAnalyser = (filename) => {
     const content = fs.readFileSync(filename, 'utf-8');
-    // ast 抽象语法树
+    // ast 抽象语法树 将js代码转换成对象
     const ast = parser.parse(content, {
         sourceType: 'module',
     });
@@ -33,5 +33,33 @@ const moduleAnalyser = (filename) => {
     };
 }
 
-const moduleInfo = moduleAnalyser('./src/index.js');
-console.log('moduleInfo', moduleInfo);
+// 依赖图谱
+const makeDependenciesGraph = (entry) => {
+    const entryModule = moduleAnalyser(entry);
+    const graphArray = [ entryModule ];
+    for(let i = 0; i < graphArray.length; i++) {
+        const item = graphArray[i];
+        const { dependencies } = item;
+        if ( dependencies ) {
+            for (let j in dependencies) {
+                graphArray.push(moduleAnalyser(dependencies[j]));
+            }
+        }
+    }
+    const graph = {};
+    graphArray.forEach(item => {
+        graph[item.filename] = {
+            dependencies: item.dependencies,
+            code: item.code
+        }
+    });
+    return graph;
+}
+
+// 依赖图谱
+const graphInfo = makeDependenciesGraph('./src/index.js');
+console.log('graphInfo', graphInfo);
+
+// 首页依赖
+// const moduleInfo = moduleAnalyser('./src/index.js');
+// console.log('moduleInfo', moduleInfo);
